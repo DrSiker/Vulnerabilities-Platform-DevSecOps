@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from database import db, Vulnerability
-from backend.config_app import Config
+from config_app import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
