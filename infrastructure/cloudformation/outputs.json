@@ -1,0 +1,14 @@
+{
+    "DatabaseEndpoint": {
+      "Value": { "Fn::GetAtt": ["VulnerabilityDB", "Endpoint.Address"] },
+      "Export": { "Name": "DatabaseEndpoint" }
+    },
+    "BackendInstancePublicIP": {
+      "Value": { "Fn::GetAtt": ["BackendInstance", "PublicIp"] },
+      "Export": { "Name": "BackendPublicIP" }
+    },
+    "FrontendURL": {
+      "Value": { "Fn::Sub": "https://${CloudFrontDistribution.DomainName}" },
+      "Export": { "Name": "FrontendURL" }
+    }
+  }
