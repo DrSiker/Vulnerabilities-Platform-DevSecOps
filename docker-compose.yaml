@@ -7,7 +7,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 159753
+      POSTGRES_PASSWORD: password123
       POSTGRES_DB: vulndb
     volumes:
       - postgres_data:/var/lib/postgresql/data
