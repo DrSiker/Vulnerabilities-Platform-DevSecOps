@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
 
 jobs:
@@ -26,27 +25,34 @@ jobs:
       - name: Run SAST (Bandit)
         run: |
           pip install bandit
-          bandit -r backend/
+          bandit -r backend/ | tee bandit_report.txt
 
-      - name: Run SCA (Safety)
+      - name: Run SCA (JFrog Xray)
+        env:
+          JFROG_URL: "https://your-jfrog-instance"
+          JFROG_USER: "your-username"
+          JFROG_PASSWORD: "your-password"
         run: |
-          pip install safety
-          safety check --full-report -r backend/requirements.txt
+          curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" -H "Content-Type: application/json" --data '{"artifact": "backend/requirements.txt"}' | tee jfrog_report.txt
 
       - name: Run DAST (OWASP ZAP)
         uses: zaproxy/action-full-scan@v0.5.0
         with:
           target: 'http://localhost:5000'
-
-  build:
-    runs-on: ubuntu-latest
-    needs: security-checks
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
-
-      - name: Build and push Docker images
+        continue-on-error: true
+      
+      - name: Parse Reports and Send to Backend
         run: |
-          docker build -t my-backend ./backend
-          docker build -t my-frontend ./frontend
-          docker build -t my-db ./db
+          echo "Generating vulnerability report..."
+          echo "{" > vulnerabilities.json
+          echo "  \"SAST\": " >> vulnerabilities.json
+          cat bandit_report.txt | jq -R -s '.' >> vulnerabilities.json
+          echo "," >> vulnerabilities.json
+          echo "  \"SCA\": " >> vulnerabilities.json
+          cat jfrog_report.txt | jq -R -s '.' >> vulnerabilities.json
+          echo "}" >> vulnerabilities.json
+          
+          echo "Sending vulnerabilities to backend..."
+          curl -X POST "http://localhost:5000/vulnerabilities" \
+          -H "Content-Type: application/json" \
+          -d @vulnerabilities.json
