@@ -17,3 +17,7 @@ for _ in range(10):
     except OperationalError:
         print("⏳ Esperando a que la base de datos esté lista...")
         time.sleep(5)
+        
+class Config:
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
