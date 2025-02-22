@@ -3,6 +3,7 @@ FROM node:16-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install --force
+RUN npm install react-scripts --save --force
 COPY . .
 RUN npm run build
 
