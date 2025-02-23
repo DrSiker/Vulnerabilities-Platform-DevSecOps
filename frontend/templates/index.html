@@ -10,12 +10,25 @@
     <div class="container">
         <h1>Lista de Vulnerabilidades</h1>
         <ul class="vulnerability-list">
-            {% for vuln in vulnerabilities %}
-            <li class="vulnerability-item">
-                <strong>{{ vuln.description }}</strong> - Severidad: {{ vuln.severity }}
-            </li>
-            {% endfor %}
+            <!-- Aquí se cargarán los datos dinámicamente -->
         </ul>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            fetch('http://localhost:5000/vulnerabilities')
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.querySelector(".vulnerability-list");
+                    list.innerHTML = "";  // Limpiar lista antes de agregar elementos
+                    data.forEach(vuln => {
+                        const item = document.createElement("li");
+                        item.innerHTML = `<strong>${vuln.description}</strong> - Severidad: ${vuln.severity}`;
+                        list.appendChild(item);
+                    });
+                })
+                .catch(error => console.error("Error al obtener vulnerabilidades:", error));
+        });
+    </script>
 </body>
 </html>
