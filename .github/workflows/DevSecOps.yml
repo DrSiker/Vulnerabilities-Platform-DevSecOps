@@ -1,12 +1,12 @@
 name: DevSecOps CI/CD
 
 on:
-  # push:
-  #   paths:
-  #     - 'app-vulnerable/**'
-  pull_request:
+  push:
     paths:
       - 'app-vulnerable/**'
+  # pull_request:
+  #   paths:
+  #     - 'app-vulnerable/**'
 
 jobs:
   security-checks:
