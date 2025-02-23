@@ -9,6 +9,10 @@ app.config.from_object(Config)
 db.init_app(app)
 CORS(app)
 
+@app.route("/")
+def home():
+    return jsonify({"message": "Welcome to the Vulnerability Management Platform"}), 200
+
 @app.route("/vulnerabilities", methods=["POST"])
 def report_vulnerability():
     data = request.json
