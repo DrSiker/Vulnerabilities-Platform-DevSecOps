@@ -58,10 +58,14 @@ jobs:
           target: 'http://localhost:8080'
         continue-on-error: true
 
-      # 🔍 **Escaneo de Imágenes Docker**
-      - name: Run Container Scan (Trivy)
+      - name: Build Docker Image
         run: |
-          trivy image vulnerabilities-platform-devsecops-app-vulnerable:latest > trivy_docker_report.txt
+          docker build -t app-vulnerable:latest app-vulnerable/
+
+      - name: Run SCA (Trivy) on Docker Image
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy image app-vulnerable:latest > trivy_report.txt
 
       # 📊 **Procesamiento de Reportes**
       - name: Parse Reports and Send to Backend
