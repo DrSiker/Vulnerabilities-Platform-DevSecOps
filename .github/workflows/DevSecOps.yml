@@ -24,16 +24,14 @@ jobs:
         run: |
           pip install -r app-vulnerable/requirements.txt
 
-      - name: Install GitLeaks
-        run: |
-          curl -sSL -o gitleaks https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64
-          chmod +x gitleaks
-          sudo mv gitleaks /usr/local/bin/
-
       - name: Run Secret Scanning (GitLeaks)
-        run: |
-          gitleaks detect --source app-vulnerable/ --report-format=json --report-path=gitleaks_report.json || true
-
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+          report-format: json
+          report-path: gitleaks_report.json
+        continue-on-error: true
+        
       # 🔍 **Escaneo SAST (Código Estático)**
       - name: Run SAST (Bandit)
         run: |
