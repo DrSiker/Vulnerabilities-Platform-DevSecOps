@@ -1,9 +1,9 @@
 name: DevSecOps CI/CD
 
 on:
-  push:
-    paths:
-      - 'app-vulnerable/**'
+  # push:
+  #   paths:
+  #     - 'app-vulnerable/**'
   pull_request:
     paths:
       - 'app-vulnerable/**'
