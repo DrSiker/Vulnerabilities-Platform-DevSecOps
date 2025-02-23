@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Vulnerabilidades</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Lista de Vulnerabilidades</h1>
+        <ul class="vulnerability-list">
+            {% for vuln in vulnerabilities %}
+            <li class="vulnerability-item">
+                <strong>{{ vuln.description }}</strong> - Severidad: {{ vuln.severity }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

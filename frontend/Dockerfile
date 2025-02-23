@@ -1,15 +1,6 @@
-# Construcción del frontend
-FROM node:16-alpine AS builder
+FROM python:3.9-slim
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm install --force
-RUN npm install react-scripts --save --force
 COPY . .
-RUN npm run build
-
-# Servir con Nginx
-FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+RUN pip install --no-cache-dir flask requests gunicorn
+EXPOSE 3000
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:3000", "app:app"]
