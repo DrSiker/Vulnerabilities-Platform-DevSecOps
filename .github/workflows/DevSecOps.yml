@@ -46,6 +46,14 @@ jobs:
         run: |
           curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" \
           -H "Content-Type: application/json" --data '{"artifact": "app-vulnerable/requirements.txt"}' | tee jfrog_report.txt
+      
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.46.0_Linux-64bit.tar.gz
+          tar -xvf trivy_0.46.0_Linux-64bit.tar.gz
+          sudo mv trivy /usr/local/bin/
 
       - name: Run SCA (Trivy)
         run: |
