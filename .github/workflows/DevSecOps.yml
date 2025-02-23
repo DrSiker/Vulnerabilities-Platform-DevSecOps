@@ -25,13 +25,11 @@ jobs:
           pip install -r app-vulnerable/requirements.txt
 
       - name: Run Secret Scanning (GitLeaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v1.2.0
         with:
-          config-path: .gitleaks.toml
-          report-format: json
-          report-path: gitleaks_report.json
+          args: --report-format=json --report-path=gitleaks_report.json
         continue-on-error: true
-        
+
       # 🔍 **Escaneo SAST (Código Estático)**
       - name: Run SAST (Bandit)
         run: |
@@ -74,6 +72,11 @@ jobs:
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy image app-vulnerable:latest > trivy_docker_report.txt
+
+      - name: Start Backend Service
+        run: |
+          docker-compose up -d backend
+          sleep 15
 
       # 📊 **Procesamiento de Reportes**
       - name: Parse Reports and Send to Backend
