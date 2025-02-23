@@ -47,16 +47,9 @@ jobs:
           curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" \
           -H "Content-Type: application/json" --data '{"artifact": "app-vulnerable/requirements.txt"}' | tee jfrog_report.txt
       
-      - name: Install Trivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget
-          wget -qO- https://github.com/aquasecurity/trivy/releases/latest/download/trivy_Linux-64bit.tar.gz | tar xz
-          sudo mv trivy /usr/local/bin/
-
       - name: Run SCA (Trivy)
         run: |
-          trivy fs --scanners vuln,secret app-vulnerable/ > trivy_report.txt
+          docker run --rm -v ${{ github.workspace }}:/app aquasec/trivy fs --scanners vuln,secret /app/app-vulnerable/ > trivy_report.txt
 
       # 🔍 **Escaneo Dinámico (DAST)**
       - name: Run DAST (OWASP ZAP)
