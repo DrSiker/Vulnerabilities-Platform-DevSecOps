@@ -1,22 +1,21 @@
 from flask import Flask, render_template
+import requests
 
 app = Flask(__name__)
-app.config["TEMPLATES_AUTO_RELOAD"] = True  # 🔥 Habilita la recarga automática de plantillas
+app.config["TEMPLATES_AUTO_RELOAD"] = True  # Habilita la recarga automática de plantillas
 
-# Datos de ejemplo
-vulnerabilities = [
-    {"description": "SQL Injection", "severity": "Crítico"},
-    {"description": "XSS", "severity": "Alto"},
-    {"description": "CSRF", "severity": "Medio"},
-]
+BACKEND_URL = "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities"
 
 @app.route("/")
 def index():
-    return render_template("index.html")
-
-@app.route("/vulnerabilities")
-def vulnerabilities_view():
-    return render_template("vulnerabilities.html", vulnerabilities=vulnerabilities)
+    try:
+        response = requests.get(BACKEND_URL)
+        vulnerabilities = response.json() if response.status_code == 200 else []
+    except Exception as e:
+        print("Error al obtener datos del backend:", e)
+        vulnerabilities = []
+    
+    return render_template("index.html", vulnerabilities=vulnerabilities)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000, debug=True)
