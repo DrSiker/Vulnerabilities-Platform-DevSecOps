@@ -30,12 +30,12 @@ jobs:
           pip install bandit
           bandit -r app-vulnerable/src/ | tee bandit_report.txt
 
-      - name: Run SAST (SonarQube)
-        env:
-          SONAR_HOST_URL: "https://your-sonarqube-instance"
-          SONAR_TOKEN: "your-token"
-        run: |
-          sonar-scanner -Dsonar.projectKey=app-vulnerable -Dsonar.sources=app-vulnerable/src/ -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
+      # - name: Run SAST (SonarQube)
+      #   env:
+      #     SONAR_HOST_URL: "https://your-sonarqube-instance"
+      #     SONAR_TOKEN: "your-token"
+      #   run: |
+      #     sonar-scanner -Dsonar.projectKey=app-vulnerable -Dsonar.sources=app-vulnerable/src/ -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
 
       # 🔍 **Escaneo de Dependencias (SCA)**
       - name: Run SCA (JFrog Xray)
