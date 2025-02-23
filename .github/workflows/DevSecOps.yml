@@ -24,6 +24,16 @@ jobs:
         run: |
           pip install -r app-vulnerable/requirements.txt
 
+      - name: Install GitLeaks
+        run: |
+          curl -sSL -o gitleaks https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64
+          chmod +x gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Run Secret Scanning (GitLeaks)
+        run: |
+          gitleaks detect --source app-vulnerable/ --report-format=json --report-path=gitleaks_report.json || true
+
       # 🔍 **Escaneo SAST (Código Estático)**
       - name: Run SAST (Bandit)
         run: |
@@ -38,25 +48,25 @@ jobs:
       #     sonar-scanner -Dsonar.projectKey=app-vulnerable -Dsonar.sources=app-vulnerable/src/ -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
 
       # 🔍 **Escaneo de Dependencias (SCA)**
-      - name: Run SCA (JFrog Xray)
-        env:
-          JFROG_URL: "https://your-jfrog-instance"
-          JFROG_USER: "your-username"
-          JFROG_PASSWORD: "your-password"
-        run: |
-          curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" \
-          -H "Content-Type: application/json" --data '{"artifact": "app-vulnerable/requirements.txt"}' | tee jfrog_report.txt
+      # - name: Run SCA (JFrog Xray)
+      #   env:
+      #     JFROG_URL: "https://your-jfrog-instance"
+      #     JFROG_USER: "your-username"
+      #     JFROG_PASSWORD: "your-password"
+      #   run: |
+      #     curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" \
+      #     -H "Content-Type: application/json" --data '{"artifact": "app-vulnerable/requirements.txt"}' | tee jfrog_report.txt
       
       - name: Run SCA (Trivy)
         run: |
-          docker run --rm -v ${{ github.workspace }}:/app aquasec/trivy fs --scanners vuln,secret /app/app-vulnerable/ > trivy_report.txt
+          docker run --rm -v ${{ github.workspace }}:/app aquasec/trivy fs --scanners vuln /app/app-vulnerable/ > trivy_report.txt
 
       # 🔍 **Escaneo Dinámico (DAST)**
-      - name: Run DAST (OWASP ZAP)
-        uses: zaproxy/action-full-scan@v0.5.0
-        with:
-          target: 'http://localhost:8080'
-        continue-on-error: true
+      # - name: Run DAST (OWASP ZAP)
+      #   uses: zaproxy/action-full-scan@v0.5.0
+      #   with:
+      #     target: 'http://localhost:8080'
+      #   continue-on-error: true
 
       - name: Build Docker Image
         run: |
@@ -65,7 +75,7 @@ jobs:
       - name: Run SCA (Trivy) on Docker Image
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy image app-vulnerable:latest > trivy_report.txt
+            aquasec/trivy image app-vulnerable:latest > trivy_docker_report.txt
 
       # 📊 **Procesamiento de Reportes**
       - name: Parse Reports and Send to Backend
@@ -75,10 +85,13 @@ jobs:
           cat bandit_report.txt | jq -R -s '.' >> vulnerabilities.json
           echo "," >> vulnerabilities.json
           echo "  \"SCA\": " >> vulnerabilities.json
-          cat jfrog_report.txt | jq -R -s '.' >> vulnerabilities.json
-          echo "," >> vulnerabilities.json
-          echo "  \"Trivy\": " >> vulnerabilities.json
           cat trivy_report.txt | jq -R -s '.' >> vulnerabilities.json
+          echo "," >> vulnerabilities.json
+          echo "  \"Trivy Docker\": " >> vulnerabilities.json
+          cat trivy_docker_report.txt | jq -R -s '.' >> vulnerabilities.json
+          echo "," >> vulnerabilities.json
+          echo "  \"Secrets\": " >> vulnerabilities.json
+          cat gitleaks_report.json | jq -R -s '.' >> vulnerabilities.json
           echo "}" >> vulnerabilities.json
 
           echo "Sending vulnerabilities to backend..."
