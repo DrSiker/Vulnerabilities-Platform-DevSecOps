@@ -24,11 +24,20 @@ jobs:
         run: |
           pip install -r app-vulnerable/requirements.txt
 
+      # 🔍 **Escaneo SAST (Código Estático)**
       - name: Run SAST (Bandit)
         run: |
           pip install bandit
           bandit -r app-vulnerable/src/ | tee bandit_report.txt
 
+      - name: Run SAST (SonarQube)
+        env:
+          SONAR_HOST_URL: "https://your-sonarqube-instance"
+          SONAR_TOKEN: "your-token"
+        run: |
+          sonar-scanner -Dsonar.projectKey=app-vulnerable -Dsonar.sources=app-vulnerable/src/ -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
+
+      # 🔍 **Escaneo de Dependencias (SCA)**
       - name: Run SCA (JFrog Xray)
         env:
           JFROG_URL: "https://your-jfrog-instance"
@@ -38,23 +47,36 @@ jobs:
           curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" \
           -H "Content-Type: application/json" --data '{"artifact": "app-vulnerable/requirements.txt"}' | tee jfrog_report.txt
 
+      - name: Run SCA (Trivy)
+        run: |
+          trivy fs --scanners vuln,secret app-vulnerable/ > trivy_report.txt
+
+      # 🔍 **Escaneo Dinámico (DAST)**
       - name: Run DAST (OWASP ZAP)
         uses: zaproxy/action-full-scan@v0.5.0
         with:
           target: 'http://localhost:8080'
         continue-on-error: true
-      
+
+      # 🔍 **Escaneo de Imágenes Docker**
+      - name: Run Container Scan (Trivy)
+        run: |
+          trivy image vulnerabilities-platform-devsecops-app-vulnerable:latest > trivy_docker_report.txt
+
+      # 📊 **Procesamiento de Reportes**
       - name: Parse Reports and Send to Backend
         run: |
-          echo "Generating vulnerability report..."
           echo "{" > vulnerabilities.json
           echo "  \"SAST\": " >> vulnerabilities.json
           cat bandit_report.txt | jq -R -s '.' >> vulnerabilities.json
           echo "," >> vulnerabilities.json
           echo "  \"SCA\": " >> vulnerabilities.json
           cat jfrog_report.txt | jq -R -s '.' >> vulnerabilities.json
+          echo "," >> vulnerabilities.json
+          echo "  \"Trivy\": " >> vulnerabilities.json
+          cat trivy_report.txt | jq -R -s '.' >> vulnerabilities.json
           echo "}" >> vulnerabilities.json
-          
+
           echo "Sending vulnerabilities to backend..."
           curl -X POST "http://localhost:5000/vulnerabilities" \
           -H "Content-Type: application/json" \
