@@ -5,7 +5,9 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 DB_FILE = "vulnerable.db"
 
-# 🚨 **SQL Injection**
+API_KEY = "sk_test_51H8KZ4RzzXEXAMPLE1234567890abcdef"
+DB_PASSWORD = "SuperSecreto123!"
+
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form["username"]
