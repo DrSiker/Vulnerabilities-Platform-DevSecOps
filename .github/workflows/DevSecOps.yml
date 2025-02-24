@@ -73,10 +73,10 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy image app-vulnerable:latest > trivy_docker_report.txt
 
-      - name: Start Backend Service
-        run: |
-          docker-compose up -d backend
-          sleep 15
+      # - name: Start Backend Service
+      #   run: |
+      #     docker-compose up -d backend
+      #     sleep 15
 
       # 📊 **Procesamiento de Reportes**
       - name: Parse Reports and Send to Backend
