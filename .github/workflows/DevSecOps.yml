@@ -4,15 +4,51 @@ on:
   push:
     paths:
       - 'app-vulnerable/**'
+name: DevSecOps Pipeline
 
 jobs:
   security-scans:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: drsiker/vulnerabilities-platform-devsecops-db:latest
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+        healthcheck:
+          test: ["CMD", "pg_isready", "-U", "${{ secrets.DB_USER }}"]
+          interval: 10s
+          retries: 5
+          timeout: 5s
+
+      backend:
+        image: drsiker/vulnerabilities-platform-devsecops-backend:latest
+        ports:
+          - "5000:5000"
+        env:
+          DB_HOST: db
+          DB_PORT: 5432
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        depends_on:
+          db:
+            condition: service_healthy
+
+      frontend:
+        image: drsiker/vulnerabilities-platform-devsecops-frontend:latest
+        ports:
+          - "3000:3000"
+        depends_on:
+          - backend
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Paso 1: Instalar dependencias
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -23,30 +59,25 @@ jobs:
           pip install bandit
           sudo apt-get install -y wget unzip jq
 
-      # Paso 2: Ejecutar Bandit (SAST) y generar reporte en texto
       - name: Run Bandit (SAST)
         run: |
           bandit -r app-vulnerable/src/ | tee bandit_report.txt || true
           echo "Bandit report generated."
 
-      # Paso 3: Convertir el reporte de texto a JSON
       - name: Convert Bandit Report to JSON
         run: |
-          # Convertir el reporte de texto a JSON
           echo '{"tool": "Bandit", "report": ' > bandit_report.json
           cat bandit_report.txt | jq -R -s '.' >> bandit_report.json
           echo '}' >> bandit_report.json
           echo "Bandit report converted to JSON."
 
-      # Paso 4: Enviar reporte de Bandit al backend
       - name: Send Bandit Report to Backend
         run: |
           echo "Sending Bandit report to backend..."
-          curl -X POST "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities" \
+          curl -X POST "http://localhost:5000/vulnerabilities" \
           -H "Content-Type: application/json" \
           -d @bandit_report.json
 
-      # Paso 5: Ejecutar Dependency-Check (SCA)
       - name: Run Dependency-Check (SCA)
         run: |
           wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.2.1/dependency-check-8.2.1-release.zip
@@ -54,25 +85,22 @@ jobs:
           ./dependency-check/bin/dependency-check.sh --project "Vulnerabilities-Platform" --scan . --format JSON --out dependency-check-report.json || true
           echo "Dependency-Check report generated."
 
-      # Paso 6: Enviar reporte de Dependency-Check al backend
       - name: Send Dependency-Check Report to Backend
         run: |
           echo "Sending Dependency-Check report to backend..."
-          curl -X POST "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities" \
+          curl -X POST "http://localhost:5000/vulnerabilities" \
           -H "Content-Type: application/json" \
           -d '{"tool": "Dependency-Check", "report": '$(cat dependency-check-report.json)'}'
 
-      # Paso 7: Ejecutar OWASP ZAP (DAST)
       - name: Run OWASP ZAP (DAST)
         run: |
           docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py \
           -t http://your-app-url.com -r zap_report.html -J zap_report.json || true
           echo "OWASP ZAP report generated."
 
-      # Paso 8: Enviar reporte de OWASP ZAP al backend
       - name: Send OWASP ZAP Report to Backend
         run: |
           echo "Sending OWASP ZAP report to backend..."
-          curl -X POST "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities" \
+          curl -X POST "http://localhost:5000/vulnerabilities" \
           -H "Content-Type: application/json" \
           -d '{"tool": "OWASP ZAP", "report": '$(cat zap_report.json)'}'
