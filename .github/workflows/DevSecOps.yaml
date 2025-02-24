@@ -48,10 +48,12 @@ jobs:
           pip install bandit
           sudo apt-get install -y wget unzip jq
 
-      - name: Wait for services to be ready
+      - name: Wait for backend to be ready
         run: |
-          echo "Waiting for services to be ready..."
-          sleep 5
+          echo "Waiting for backend to be ready..."
+          until curl -s http://localhost:5000; do
+            sleep 1
+          done
 
       - name: Run Bandit (SAST)
         run: |
@@ -74,7 +76,7 @@ jobs:
 
       - name: Run Dependency-Check (SCA)
         run: |
-          wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.2.1/dependency-check-8.2.1-release.zip
+          wget --tries=3 https://github.com/jeremylong/DependencyCheck/releases/download/v8.2.1/dependency-check-8.2.1-release.zip
           unzip dependency-check-8.2.1-release.zip
           ./dependency-check/bin/dependency-check.sh --project "Vulnerabilities-Platform" --scan . --format JSON --out dependency-check-report.json || true
           echo "Dependency-Check report generated."
@@ -88,6 +90,7 @@ jobs:
 
       - name: Run OWASP ZAP (DAST)
         run: |
+          docker pull owasp/zap2docker-stable
           docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py \
           -t http://your-app-url.com -r zap_report.html -J zap_report.json || true
           echo "OWASP ZAP report generated."
