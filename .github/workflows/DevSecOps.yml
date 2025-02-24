@@ -1,4 +1,4 @@
-name: DevSecOps CI/CD
+name: DevSecOps Pipeline
 
 on:
   push:
@@ -9,97 +9,48 @@ on:
   #     - 'app-vulnerable/**'
 
 jobs:
-  security-checks:
+  security-scans:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
+      # Paso 1: Instalar dependencias
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
-          pip install -r app-vulnerable/requirements.txt
-
-      - name: Run Secret Scanning (GitLeaks)
-        uses: gitleaks/gitleaks-action@v1.2.0
-        with:
-          args: --source=app-vulnerable --verbose --redact --report-format=json --report-path=gitleaks_report.json
-        continue-on-error: true
-
-      # 🔍 **Escaneo SAST (Código Estático)**
-      - name: Run SAST (Bandit)
-        run: |
           pip install bandit
-          bandit -r app-vulnerable/src/ | tee bandit_report.txt
+          sudo apt-get install -y wget unzip
 
-      # - name: Run SAST (SonarQube)
-      #   env:
-      #     SONAR_HOST_URL: "https://your-sonarqube-instance"
-      #     SONAR_TOKEN: "your-token"
-      #   run: |
-      #     sonar-scanner -Dsonar.projectKey=app-vulnerable -Dsonar.sources=app-vulnerable/src/ -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
-
-      # 🔍 **Escaneo de Dependencias (SCA)**
-      # - name: Run SCA (JFrog Xray)
-      #   env:
-      #     JFROG_URL: "https://your-jfrog-instance"
-      #     JFROG_USER: "your-username"
-      #     JFROG_PASSWORD: "your-password"
-      #   run: |
-      #     curl -u $JFROG_USER:$JFROG_PASSWORD -X POST "$JFROG_URL/xray/api/v1/scanArtifact" \
-      #     -H "Content-Type: application/json" --data '{"artifact": "app-vulnerable/requirements.txt"}' | tee jfrog_report.txt
-      
-      - name: Run SCA (Trivy)
+      # Paso 2: Ejecutar Bandit (SAST)
+      - name: Run Bandit (SAST)
         run: |
-          docker run --rm -v ${{ github.workspace }}:/app aquasec/trivy fs --scanners vuln /app/app-vulnerable/ > trivy_report.txt
+          bandit -r app-vulnerable/src/ -f json -o bandit_report.json
+          echo "Bandit report generated."
 
-      # 🔍 **Escaneo Dinámico (DAST)**
-      # - name: Run DAST (OWASP ZAP)
-      #   uses: zaproxy/action-full-scan@v0.5.0
-      #   with:
-      #     target: 'http://localhost:8080'
-      #   continue-on-error: true
-
-      - name: Build Docker Image
+      # Paso 3: Ejecutar Dependency-Check (SCA)
+      - name: Run Dependency-Check (SCA)
         run: |
-          docker build -t app-vulnerable:latest app-vulnerable/
+          wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.2.1/dependency-check-8.2.1-release.zip
+          unzip dependency-check-8.2.1-release.zip
+          ./dependency-check/bin/dependency-check.sh --project "Vulnerabilities-Platform" --scan . --format JSON --out dependency-check-report.json
+          echo "Dependency-Check report generated."
 
-      - name: Run SCA (Trivy) on Docker Image
+      # Paso 4: Enviar reportes al backend
+      - name: Send Bandit Report to Backend
         run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy image app-vulnerable:latest > trivy_docker_report.txt
-
-      # - name: Start Backend Service
-      #   run: |
-      #     docker-compose up -d backend
-      #     sleep 15
-
-      # 📊 **Procesamiento de Reportes**
-      - name: Parse Reports and Send to Backend
-        run: |
-          echo "{" > vulnerabilities.json
-          echo "  \"SAST\": " >> vulnerabilities.json
-          cat bandit_report.txt | jq -R -s '.' >> vulnerabilities.json
-          echo "," >> vulnerabilities.json
-          echo "  \"SCA\": " >> vulnerabilities.json
-          cat trivy_report.txt | jq -R -s '.' >> vulnerabilities.json
-          echo "," >> vulnerabilities.json
-          echo "  \"Trivy Docker\": " >> vulnerabilities.json
-          cat trivy_docker_report.txt | jq -R -s '.' >> vulnerabilities.json
-          echo "," >> vulnerabilities.json
-          echo "  \"Secrets\": " >> vulnerabilities.json
-          if [ -f gitleaks_report.json ]; then
-            cat gitleaks_report.json | jq -R -s '.' >> vulnerabilities.json
-          else
-            echo "\"No secrets found\"" >> vulnerabilities.json
-          fi
-          echo "}" >> vulnerabilities.json
-
-          echo "Sending vulnerabilities to backend..."
+          echo "Sending Bandit report to backend..."
           curl -X POST "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities" \
           -H "Content-Type: application/json" \
-          -d @vulnerabilities.json
+          -d '{"tool": "Bandit", "report": '$(cat bandit_report.json)'}'
+
+      - name: Send Dependency-Check Report to Backend
+        run: |
+          echo "Sending Dependency-Check report to backend..."
+          curl -X POST "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities" \
+          -H "Content-Type: application/json" \
+          -d '{"tool": "Dependency-Check", "report": '$(cat dependency-check-report.json)'}'
