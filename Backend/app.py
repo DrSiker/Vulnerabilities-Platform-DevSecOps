@@ -16,15 +16,38 @@ def home():
 @app.route("/vulnerabilities", methods=["POST"])
 def report_vulnerability():
     data = request.json
-    new_vuln = Vulnerability(description=data.get("description"), severity=data.get("severity"))
-    db.session.add(new_vuln)
+    
+    if not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON format. Expected a dictionary."}), 400
+    
+    vulnerabilities = []
+    
+    for key, value in data.items():
+        if isinstance(value, list):  # Si es una lista de vulnerabilidades
+            for item in value:
+                description = item.get("description", "No description provided")
+                severity = item.get("severity", "Unknown")
+                vulnerabilities.append(Vulnerability(description=description, severity=severity))
+        elif isinstance(value, dict):  # Si es un solo objeto
+            description = value.get("description", "No description provided")
+            severity = value.get("severity", "Unknown")
+            vulnerabilities.append(Vulnerability(description=description, severity=severity))
+    
+    if not vulnerabilities:
+        return jsonify({"error": "No valid vulnerabilities found in the request."}), 400
+
+    db.session.add_all(vulnerabilities)
     db.session.commit()
-    return jsonify({"message": "Vulnerability reported successfully"}), 201
+
+    return jsonify({"message": f"{len(vulnerabilities)} vulnerabilities reported successfully"}), 201
 
 @app.route("/vulnerabilities", methods=["GET"])
 def get_vulnerabilities():
     vulnerabilities = Vulnerability.query.all()
-    return jsonify([{ "id": v.id, "description": v.description, "severity": v.severity } for v in vulnerabilities])
+    return jsonify([
+        {"id": v.id, "description": v.description, "severity": v.severity}
+        for v in vulnerabilities
+    ])
 
 if __name__ == "__main__":
     with app.app_context():
