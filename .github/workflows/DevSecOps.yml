@@ -100,6 +100,6 @@ jobs:
           echo "}" >> vulnerabilities.json
 
           echo "Sending vulnerabilities to backend..."
-          curl -X POST "http://localhost:5000/vulnerabilities" \
+          curl -X POST "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities" \
           -H "Content-Type: application/json" \
           -d @vulnerabilities.json
