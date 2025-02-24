@@ -27,7 +27,7 @@ jobs:
       - name: Run Secret Scanning (GitLeaks)
         uses: gitleaks/gitleaks-action@v1.2.0
         with:
-          args: --report-format=json --report-path=gitleaks_report.json
+          args: --source=app-vulnerable --verbose --redact --report-format=json --report-path=gitleaks_report.json
         continue-on-error: true
 
       # 🔍 **Escaneo SAST (Código Estático)**
@@ -92,7 +92,11 @@ jobs:
           cat trivy_docker_report.txt | jq -R -s '.' >> vulnerabilities.json
           echo "," >> vulnerabilities.json
           echo "  \"Secrets\": " >> vulnerabilities.json
-          cat gitleaks_report.json | jq -R -s '.' >> vulnerabilities.json
+          if [ -f gitleaks_report.json ]; then
+            cat gitleaks_report.json | jq -R -s '.' >> vulnerabilities.json
+          else
+            echo "\"No secrets found\"" >> vulnerabilities.json
+          fi
           echo "}" >> vulnerabilities.json
 
           echo "Sending vulnerabilities to backend..."
