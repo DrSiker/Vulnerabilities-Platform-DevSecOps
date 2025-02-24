@@ -1,6 +1,6 @@
 # Aplicación Vulnerable
 
-Esta aplicación contiene vulnerabilidades intencionadas para pruebas de seguridad.
+Esta aplicación contiene vulnerabilidades intencionadas para pruebas de seguridad .
 
 ## Vulnerabilidades Intencionadas:
 1. **SQL Injection** - No se usa `?` o parámetros seguros en las consultas SQL.
