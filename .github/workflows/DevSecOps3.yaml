@@ -114,7 +114,7 @@ jobs:
         }' bandit_report.json safety_report.json snyk_report.json snyk_code_report.json trivy_fs_report.json dependency-check-report.json > combined_report.json
 
     - name: Upload Security Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
