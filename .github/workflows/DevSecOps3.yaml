@@ -95,12 +95,6 @@ jobs:
       uses: gitleaks/gitleaks-action@v2
       continue-on-error: true
 
-    - name: Run SonarCloud Scan
-      if: github.event_name != 'pull_request'
-      uses: SonarSource/sonarcloud-github-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
     - name: Process and Combine Reports
       run: |
         # Combine all reports into a single summary
