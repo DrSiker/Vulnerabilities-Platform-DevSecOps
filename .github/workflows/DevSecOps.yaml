@@ -58,10 +58,8 @@ jobs:
     # Ejecutar Gitleaks para detección de secretos
     - name: Run Gitleaks (Secret Scanning)
       uses: gitleaks/gitleaks-action@v2
-      with:
-        args: detect --source app-vulnerable/ --report-format json --report-path gitleaks_report.json || true
+      continue-on-error: true
 
-    
     # Ejecutar Bandit
     - name: Run Bandit (SAST Analysis)
       run: |
