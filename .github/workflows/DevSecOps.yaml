@@ -95,7 +95,7 @@ jobs:
     # Ejecutar Safety
     - name: Run Python Dependencies Check (Safety)
       run: |
-        safety check -r app-vulnerable/requirements.txt --json > safety_report.json || true
+        safety scan -r app-vulnerable/requirements.txt --json > safety_report.json || true
         echo "📌 Safety Report:"
         cat safety_report.json || echo "{}" > safety_report.json
 
