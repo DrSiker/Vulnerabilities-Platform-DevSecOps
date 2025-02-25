@@ -61,7 +61,9 @@ jobs:
     - name: Install Gitleaks
       run: |
         curl -sSL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64.tar.gz
-        tar -xvf gitleaks.tar.gz
+        ls -lh gitleaks.tar.gz
+        file gitleaks.tar.gz
+        tar -xzvf gitleaks.tar.gz || (cat gitleaks.tar.gz && exit 1)
         chmod +x gitleaks
         sudo mv gitleaks /usr/local/bin/gitleaks
 
