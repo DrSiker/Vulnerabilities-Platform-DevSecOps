@@ -91,17 +91,14 @@ jobs:
         echo "Dependency check completed"
       continue-on-error: true
 
-    - name: Run Secret Scanning
+    - name: Run Secret Scanning (Gitleaks)
       uses: gitleaks/gitleaks-action@v2
-      env:
-        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
       continue-on-error: true
 
     - name: Run SonarCloud Scan
       if: github.event_name != 'pull_request'
       uses: SonarSource/sonarcloud-github-action@master
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     - name: Process and Combine Reports
