@@ -2,6 +2,8 @@ name: DevSecOps Pipeline CI/CD
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'app-vulnerable/**'
 
