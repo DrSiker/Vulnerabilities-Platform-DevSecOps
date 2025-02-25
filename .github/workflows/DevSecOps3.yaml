@@ -58,22 +58,20 @@ jobs:
         unzip dependency-check-8.4.0-release.zip
       timeout-minutes: 10
 
+    # Ejecutar Gitleaks para detección de secretos
+    - name: Run Gitleaks (Secret Scanning)
+      uses: gitleaks/gitleaks-action@v2
+      continue-on-error: true
+    
     # Ejecutar Bandit
-    - name: Run SAST Analysis (Bandit)
+    - name: Run Bandit (SAST Analysis)
       run: |
         bandit -r app-vulnerable/src/ -f json -o bandit_report.json || true
         echo "📌 Bandit Report:"
         cat bandit_report.json || echo "{}" > bandit_report.json
 
-    # Ejecutar Safety
-    - name: Run Python Dependencies Check (Safety)
-      run: |
-        safety check -r app-vulnerable/requirements.txt --json > safety_report.json || true
-        echo "📌 Safety Report:"
-        cat safety_report.json || echo "{}" > safety_report.json
-
     # Ejecutar Snyk
-    - name: Run Snyk Security Scan
+    - name: Run Snyk Security Scan (SCA)
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       run: |
@@ -86,7 +84,7 @@ jobs:
         cat snyk_code_report.json || echo "{}" > snyk_code_report.json
 
     # Ejecutar Trivy
-    - name: Run Trivy File System Scan
+    - name: Run Trivy File System Scan (container scanning)
       run: |
         trivy fs --format json --output trivy_fs_report.json . || true
         echo "📌 Trivy Report:"
@@ -98,11 +96,13 @@ jobs:
         ./dependency-check/bin/dependency-check.sh --scan app-vulnerable/ --format JSON --out dependency-check-report.json || true
         echo "📌 Dependency Check Report:"
         cat dependency-check-report.json || echo "{}" > dependency-check-report.json
-
-    # Ejecutar Gitleaks para detección de secretos
-    - name: Run Secret Scanning (Gitleaks)
-      uses: gitleaks/gitleaks-action@v2
-      continue-on-error: true
+  
+    # Ejecutar Safety
+    - name: Run Python Dependencies Check (Safety)
+      run: |
+        safety check -r app-vulnerable/requirements.txt --json > safety_report.json || true
+        echo "📌 Safety Report:"
+        cat safety_report.json || echo "{}" > safety_report.json
 
     # # Combinar reportes en un solo archivo JSON
     # - name: Combine and Process Security Reports
