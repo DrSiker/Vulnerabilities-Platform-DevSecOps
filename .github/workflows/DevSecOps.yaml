@@ -2,6 +2,8 @@ name: DevSecOps Pipeline CI/CD
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'app-vulnerable/**'
 
@@ -56,7 +58,9 @@ jobs:
     # Ejecutar Gitleaks para detección de secretos
     - name: Run Gitleaks (Secret Scanning)
       uses: gitleaks/gitleaks-action@v2
-      continue-on-error: true
+      with:
+        args: detect --source app-vulnerable/ --report-format json --report-path gitleaks_report.json || true
+
     
     # Ejecutar Bandit
     - name: Run Bandit (SAST Analysis)
