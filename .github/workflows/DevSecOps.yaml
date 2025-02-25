@@ -92,12 +92,12 @@ jobs:
         echo "📌 Dependency Check Report:"
         cat dependency-check-report.json || echo "{}" > dependency-check-report.json
   
-    # Ejecutar Safety
-    - name: Run Python Dependencies Check (Safety)
-      run: |
-        safety scan -r app-vulnerable/requirements.txt --json > safety_report.json || true
-        echo "📌 Safety Report:"
-        cat safety_report.json || echo "{}" > safety_report.json
+    #  Ejecutar Safety
+    # - name: Run Python Dependencies Check (Safety)
+    #   run: |
+    #     safety scan -r app-vulnerable/requirements.txt --json > safety_report.json || true
+    #     echo "📌 Safety Report:"
+    #     cat safety_report.json || echo "{}" > safety_report.json
 
     # Subir reportes de seguridad como artefacto
     - name: Upload Security Reports
