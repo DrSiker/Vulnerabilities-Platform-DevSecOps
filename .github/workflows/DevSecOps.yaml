@@ -106,11 +106,11 @@ jobs:
         name: security-reports
         path: |
           bandit_report.json
-          safety_report.json
           snyk_report.json
           snyk_code_report.json
           trivy_fs_report.json
           dependency-check-report.json
+       # safety_report.json
   
     # Limpiar archivos temporales después del escaneo
     - name: Cleanup
