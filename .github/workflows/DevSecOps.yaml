@@ -48,13 +48,6 @@
 #           pip install bandit
 #           sudo apt-get install -y wget unzip jq
 
-#       - name: Wait for backend to be ready
-#         run: |
-#           echo "Waiting for backend to be ready..."
-#           until curl -s http://localhost:5000; do
-#             sleep 1
-#           done
-
 #       - name: Run Bandit (SAST)
 #         run: |
 #           bandit -r app-vulnerable/src/ | tee bandit_report.txt || true
