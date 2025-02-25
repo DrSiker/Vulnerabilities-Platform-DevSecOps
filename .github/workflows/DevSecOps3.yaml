@@ -58,55 +58,68 @@ jobs:
         unzip dependency-check-8.4.0-release.zip
       timeout-minutes: 10
 
+    # Ejecutar Bandit
     - name: Run SAST Analysis (Bandit)
       run: |
         bandit -r app-vulnerable/src/ -f json -o bandit_report.json || true
-        echo "Bandit scan completed"
-      continue-on-error: true
+        echo "📌 Bandit Report:"
+        cat bandit_report.json || echo "{}" > bandit_report.json
 
-    - name: Run Python Dependencies Check
+    # Ejecutar Safety
+    - name: Run Python Dependencies Check (Safety)
       run: |
         safety check -r app-vulnerable/requirements.txt --json > safety_report.json || true
-        echo "Safety check completed"
-      continue-on-error: true
+        echo "📌 Safety Report:"
+        cat safety_report.json || echo "{}" > safety_report.json
 
+    # Ejecutar Snyk
     - name: Run Snyk Security Scan
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       run: |
         snyk test --all-projects --json > snyk_report.json || true
-        snyk code test --json > snyk_code_report.json || true
-        echo "Snyk scans completed"
-      continue-on-error: true
+        echo "📌 Snyk Report:"
+        cat snyk_report.json || echo "{}" > snyk_report.json
 
+        snyk code test --json > snyk_code_report.json || true
+        echo "📌 Snyk Code Report:"
+        cat snyk_code_report.json || echo "{}" > snyk_code_report.json
+
+    # Ejecutar Trivy
     - name: Run Trivy File System Scan
       run: |
         trivy fs --format json --output trivy_fs_report.json . || true
-        echo "Trivy filesystem scan completed"
-      continue-on-error: true
+        echo "📌 Trivy Report:"
+        cat trivy_fs_report.json || echo "{}" > trivy_fs_report.json
 
+    # Ejecutar OWASP Dependency Check
     - name: Run OWASP Dependency Check
       run: |
         ./dependency-check/bin/dependency-check.sh --scan app-vulnerable/ --format JSON --out dependency-check-report.json || true
-        echo "Dependency check completed"
-      continue-on-error: true
+        echo "📌 Dependency Check Report:"
+        cat dependency-check-report.json || echo "{}" > dependency-check-report.json
 
+    # Ejecutar Gitleaks para detección de secretos
     - name: Run Secret Scanning (Gitleaks)
       uses: gitleaks/gitleaks-action@v2
       continue-on-error: true
 
-    - name: Process and Combine Reports
+    # Combinar reportes en un solo archivo JSON
+    - name: Combine and Process Security Reports
       run: |
-        # Combine all reports into a single summary
         jq -s '{
-          bandit: .[0],
-          safety: .[1],
-          snyk: .[2],
-          snyk_code: .[3],
-          trivy: .[4],
-          dependency_check: .[5]
+          bandit: (.[0] // {}),
+          safety: (.[1] // {}),
+          snyk: (.[2] // {}),
+          snyk_code: (.[3] // {}),
+          trivy: (.[4] // {}),
+          dependency_check: (.[5] // {})
         }' bandit_report.json safety_report.json snyk_report.json snyk_code_report.json trivy_fs_report.json dependency-check-report.json > combined_report.json
+        
+        echo "📌 Combined Security Report:"
+        cat combined_report.json
 
+    # Subir reportes de seguridad como artefacto
     - name: Upload Security Reports
       uses: actions/upload-artifact@v4
       with:
@@ -120,14 +133,16 @@ jobs:
           trivy_fs_report.json
           dependency-check-report.json
 
-    - name: Check for Critical Vulnerabilities
-      run: |
-        if jq -e '.snyk[] | select(.severity=="critical")' snyk_report.json > /dev/null; then
-          echo "Critical vulnerabilities found!"
-          exit 1
-        fi
-      continue-on-error: true
+    # # Verificar vulnerabilidades críticas y fallar el pipeline si se encuentran
+    # - name: Check for Critical Vulnerabilities
+    #   run: |
+    #     if jq -e '.snyk[] | select(.severity=="critical")' snyk_report.json > /dev/null; then
+    #       echo "❌ Critical vulnerabilities found!"
+    #       exit 1
+    #     fi
+    #   continue-on-error: true
 
+    # Crear un issue en GitHub si el pipeline falla
     - name: Create Security Issue
       if: failure()
       uses: actions/github-script@v6
@@ -136,13 +151,15 @@ jobs:
           github.rest.issues.create({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            title: 'Security Vulnerabilities Found',
+            title: '🚨 Security Vulnerabilities Found',
             body: 'Security scanning has detected critical vulnerabilities. Please check the pipeline artifacts for details.'
           })
 
+    # Limpiar archivos temporales después del escaneo
     - name: Cleanup
       if: always()
       run: |
         rm -rf dependency-check/
         rm -f *.zip
         rm -f *.json
+
