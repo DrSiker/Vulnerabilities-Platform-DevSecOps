@@ -1,96 +1,122 @@
-# name: DevSecOps Pipeline
+name: DevSecOps Pipeline CI/CD
 
-# on:
-#   push:
-#     paths:
-#       - 'app-vulnerable/**'
+on:
+  push:
+    paths:
+      - 'app-vulnerable/**'
 
-# jobs:
-#   security-scans:
-#     runs-on: ubuntu-latest
-#     services:
-#       db:
-#         image: drsiker/vulnerabilities-platform-devsecops-db:latest
-#         ports:
-#           - "5432:5432"
-#         env:
-#           POSTGRES_USER: ${{ secrets.DB_USER }}
-#           POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-#           POSTGRES_DB: ${{ secrets.DB_NAME }}
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
 
-#       backend:
-#         image: drsiker/vulnerabilities-platform-devsecops-backend:latest
-#         ports:
-#           - "5000:5000"
-#         env:
-#           DB_HOST: db
-#           DB_PORT: 5432
-#           DB_USER: ${{ secrets.DB_USER }}
-#           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-#           DB_NAME: ${{ secrets.DB_NAME }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 
 
-#       frontend:
-#         image: drsiker/vulnerabilities-platform-devsecops-frontend:latest
-#         ports:
-#           - "3000:3000"
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip jq
+      timeout-minutes: 5
 
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
 
-#       - name: Set up Python
-#         uses: actions/setup-python@v4
-#         with:
-#           python-version: '3.9'
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
 
-#       - name: Install dependencies
-#         run: |
-#           pip install bandit
-#           sudo apt-get install -y wget unzip jq
+    - name: Install security tools
+      run: |
+        # Install Bandit
+        pip install bandit safety
+        
+        # Install Snyk
+        npm install -g snyk
+        
+        # Install Trivy
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
+        
+        # Install OWASP Dependency-Check
+        wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip
+        unzip dependency-check-8.4.0-release.zip
+      timeout-minutes: 10
 
-#       - name: Run Bandit (SAST)
-#         run: |
-#           bandit -r app-vulnerable/src/ | tee bandit_report.txt || true
-#           echo "Bandit report generated."
+    # Ejecutar Gitleaks para detección de secretos
+    - name: Run Gitleaks (Secret Scanning)
+      uses: gitleaks/gitleaks-action@v2
+      continue-on-error: true
+    
+    # Ejecutar Bandit
+    - name: Run Bandit (SAST Analysis)
+      run: |
+        bandit -r app-vulnerable/src/ -f json -o bandit_report.json || true
+        echo "📌 Bandit Report:"
+        cat bandit_report.json || echo "{}" > bandit_report.json
 
-#       - name: Convert Bandit Report to JSON
-#         run: |
-#           echo '{"tool": "Bandit", "report": ' > bandit_report.json
-#           cat bandit_report.txt | jq -R -s '.' >> bandit_report.json
-#           echo '}' >> bandit_report.json
-#           echo "Bandit report converted to JSON."
+    # Ejecutar Snyk
+    - name: Run Snyk Security Scan (SCA)
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: |
+        snyk test --all-projects --json > snyk_report.json || true
+        echo "📌 Snyk Report:"
+        cat snyk_report.json || echo "{}" > snyk_report.json
 
-#       - name: Send Bandit Report to Backend
-#         run: |
-#           echo "Sending Bandit report to backend..."
-#           curl -X POST "http://localhost:5000/vulnerabilities" \
-#           -H "Content-Type: application/json" \
-#           -d @bandit_report.json
+        snyk code test --json > snyk_code_report.json || true
+        echo "📌 Snyk Code Report:"
+        cat snyk_code_report.json || echo "{}" > snyk_code_report.json
 
-#       - name: Run Dependency-Check (SCA)
-#         run: |
-#           wget --tries=3 https://github.com/jeremylong/DependencyCheck/releases/download/v8.2.1/dependency-check-8.2.1-release.zip
-#           unzip dependency-check-8.2.1-release.zip
-#           ./dependency-check/bin/dependency-check.sh --project "Vulnerabilities-Platform" --scan . --format JSON --out dependency-check-report.json || true
-#           echo "Dependency-Check report generated."
+    # Ejecutar Trivy
+    - name: Run Trivy File System Scan (container scanning)
+      run: |
+        trivy fs --format json --output trivy_fs_report.json . || true
+        echo "📌 Trivy Report:"
+        cat trivy_fs_report.json || echo "{}" > trivy_fs_report.json
 
-#       - name: Send Dependency-Check Report to Backend
-#         run: |
-#           echo "Sending Dependency-Check report to backend..."
-#           curl -X POST "http://localhost:5000/vulnerabilities" \
-#           -H "Content-Type: application/json" \
-#           -d '{"tool": "Dependency-Check", "report": '$(cat dependency-check-report.json)'}'
+    # Ejecutar OWASP Dependency Check
+    - name: Run OWASP Dependency Check
+      run: |
+        ./dependency-check/bin/dependency-check.sh --scan app-vulnerable/ --format JSON --out dependency-check-report.json || true
+        echo "📌 Dependency Check Report:"
+        cat dependency-check-report.json || echo "{}" > dependency-check-report.json
+  
+    # Ejecutar Safety
+    - name: Run Python Dependencies Check (Safety)
+      run: |
+        safety scan -r app-vulnerable/requirements.txt --json > safety_report.json || true
+        echo "📌 Safety Report:"
+        cat safety_report.json || echo "{}" > safety_report.json
 
-#       - name: Run OWASP ZAP (DAST)
-#         run: |
-#           docker pull owasp/zap2docker-stable
-#           docker run -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py \
-#           -t http://your-app-url.com -r zap_report.html -J zap_report.json || true
-#           echo "OWASP ZAP report generated."
+    # Subir reportes de seguridad como artefacto
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          bandit_report.json
+          safety_report.json
+          snyk_report.json
+          snyk_code_report.json
+          trivy_fs_report.json
+          dependency-check-report.json
+  
+    # Limpiar archivos temporales después del escaneo
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -rf dependency-check/
+        rm -f *.zip
+        rm -f *.json
 
-#       - name: Send OWASP ZAP Report to Backend
-#         run: |
-#           echo "Sending OWASP ZAP report to backend..."
-#           curl -X POST "http://localhost:5000/vulnerabilities" \
-#           -H "Content-Type: application/json" \
-#           -d '{"tool": "OWASP ZAP", "report": '$(cat zap_report.json)'}'
