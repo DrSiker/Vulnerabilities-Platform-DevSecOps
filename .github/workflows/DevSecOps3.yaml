@@ -30,11 +30,11 @@ jobs:
         sudo apt-get install -y wget unzip jq
       timeout-minutes: 5
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+    # - name: Setup Node.js
+    #   uses: actions/setup-node@v4
+    #   with:
+    #     node-version: '20'
+    #     cache: 'npm'
 
     - name: Setup Python
       uses: actions/setup-python@v5
