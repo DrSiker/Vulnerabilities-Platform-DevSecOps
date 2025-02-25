@@ -53,22 +53,10 @@ jobs:
         unzip dependency-check-8.4.0-release.zip
       timeout-minutes: 10
 
-    # # Ejecutar Gitleaks para detección de secretos
-    # - name: Run Gitleaks (Secret Scanning)
-    #   uses: gitleaks/gitleaks-action@v2
-    #   continue-on-error: true
-
-    - name: Install Gitleaks (Alternative)
-      run: |
-        wget -q -O gitleaks https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64
-        chmod +x gitleaks
-        sudo mv gitleaks /usr/local/bin/gitleaks
-
+    # Ejecutar Gitleaks para detección de secretos
     - name: Run Gitleaks (Secret Scanning)
-      run: |
-        gitleaks detect --source app-vulnerable/ --report-format json --report-path gitleaks_report.json || true
-        echo "📌 Gitleaks Report:"
-        cat gitleaks_report.json || echo "{}" > gitleaks_report.json
+      uses: gitleaks/gitleaks-action@v2
+      continue-on-error: true
     
     # Ejecutar Bandit
     - name: Run Bandit (SAST Analysis)
