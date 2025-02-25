@@ -1,0 +1,60 @@
+name: Security Scan Pipeline
+
+on:
+  push:
+    paths:
+      - 'app-vulnerable/**'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install Snyk globally
+      run: npm install -g snyk
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install Safety and Bandit
+      run: pip install safety bandit
+
+    - name: Install Trivy
+      run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
+
+    - name: Run Bandit security scan
+      run: bandit -r . -f json -o bandit-results.json
+
+    - name: Run Snyk security scan
+      run: snyk test --json > snyk-results.json || true
+
+    - name: Run Trivy security scan
+      run: trivy filesystem --format json --output trivy-results.json .
+
+    - name: Upload Bandit results as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: bandit-results
+        path: bandit-results.json
+
+    - name: Upload Snyk results as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: snyk-results
+        path: snyk-results.json
+
+    - name: Upload Trivy results as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: trivy-results
+        path: trivy-results.json
