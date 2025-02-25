@@ -1,14 +1,9 @@
-name: Security Scanning Pipeline 3
+name: DevSecOps Pipeline CI/CD
 
 on:
   push:
     paths:
       - 'app-vulnerable/**'
-  # pull_request:
-  #   paths:
-  #     - 'app-vulnerable/**'
-  # schedule:
-  #   - cron: '0 0 * * 0'  # Weekly scan on Sundays
 
 jobs:
   security-scan:
@@ -22,7 +17,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Required for better scanning
+        fetch-depth: 0 
 
     - name: Install system dependencies
       run: |
@@ -104,21 +99,6 @@ jobs:
         echo "📌 Safety Report:"
         cat safety_report.json || echo "{}" > safety_report.json
 
-    # # Combinar reportes en un solo archivo JSON
-    # - name: Combine and Process Security Reports
-    #   run: |
-    #     jq -s '{
-    #       bandit: (.[0] // {}),
-    #       safety: (.[1] // {}),
-    #       snyk: (.[2] // {}),
-    #       snyk_code: (.[3] // {}),
-    #       trivy: (.[4] // {}),
-    #       dependency_check: (.[5] // {})
-    #     }' bandit_report.json safety_report.json snyk_report.json snyk_code_report.json trivy_fs_report.json dependency-check-report.json > combined_report.json
-        
-    #     echo "📌 Combined Security Report:"
-    #     cat combined_report.json
-
     # Subir reportes de seguridad como artefacto
     - name: Upload Security Reports
       uses: actions/upload-artifact@v4
@@ -132,30 +112,6 @@ jobs:
           trivy_fs_report.json
           dependency-check-report.json
   
-        # combined_report.json
-
-    # # Verificar vulnerabilidades críticas y fallar el pipeline si se encuentran
-    # - name: Check for Critical Vulnerabilities
-    #   run: |
-    #     if jq -e '.snyk[] | select(.severity=="critical")' snyk_report.json > /dev/null; then
-    #       echo "❌ Critical vulnerabilities found!"
-    #       exit 1
-    #     fi
-    #   continue-on-error: true
-
-    # # Crear un issue en GitHub si el pipeline falla
-    # - name: Create Security Issue
-    #   if: failure()
-    #   uses: actions/github-script@v6
-    #   with:
-    #     script: |
-    #       github.rest.issues.create({
-    #         owner: context.repo.owner,
-    #         repo: context.repo.repo,
-    #         title: '🚨 Security Vulnerabilities Found',
-    #         body: 'Security scanning has detected critical vulnerabilities. Please check the pipeline artifacts for details.'
-    #       })
-
     # Limpiar archivos temporales después del escaneo
     - name: Cleanup
       if: always()
