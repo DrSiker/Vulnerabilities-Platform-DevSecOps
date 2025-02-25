@@ -1,60 +1,55 @@
-name: Security Scan Pipeline
+# name: Pipeline de Escaneo de Seguridad
 
-on:
-  push:
-    paths:
-      - 'app-vulnerable/**'
+# on:
+#   push:
+#     paths:
+#       - 'app-vulnerable/**'
 
-jobs:
-  security-scan:
-    runs-on: ubuntu-latest
+# jobs:
+#   security-scan:
+#     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+#     steps:
+#     - name: Checkout del código
+#       uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14'
+#     - name: Instalar dependencias del sistema
+#       run: |
+#         sudo apt-get update
+#         sudo apt-get install -y wget unzip jq
 
-    - name: Install Snyk globally
-      run: npm install -g snyk
+#     - name: Configurar Node.js
+#       uses: actions/setup-node@v4
+#       with:
+#         node-version: '20'
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
+#     - name: Instalar Snyk globalmente
+#       run: npm install -g snyk
 
-    - name: Install Safety and Bandit
-      run: pip install safety bandit
+#     - name: Configurar Python
+#       uses: actions/setup-python@v5
+#       with:
+#         python-version: '3.11'
 
-    - name: Install Trivy
-      run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
+#     - name: Instalar Bandit y dependencias de Python
+#       run: |
+#         pip install bandit
 
-    - name: Run Bandit security scan
-      run: bandit -r . -f json -o bandit-results.json
+#     - name: Ejecutar Bandit (SAST)
+#       run: |
+#         bandit -r app-vulnerable/src/ | tee bandit_report.txt || true
+#         echo "Reporte de Bandit generado."
 
-    - name: Run Snyk security scan
-      run: snyk test --json > snyk-results.json || true
+#     - name: Ejecutar Snyk (Dependencias)
+#       run: |
+#         snyk test --json > snyk_results.json || true
+#         echo "Reporte de Snyk generado."
 
-    - name: Run Trivy security scan
-      run: trivy filesystem --format json --output trivy-results.json .
+#     - name: Instalar Trivy
+#       run: |
+#         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
 
-    - name: Upload Bandit results as artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: bandit-results
-        path: bandit-results.json
-
-    - name: Upload Snyk results as artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: snyk-results
-        path: snyk-results.json
-
-    - name: Upload Trivy results as artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: trivy-results
-        path: trivy-results.json
+#     - name: Ejecutar Trivy (Escaneo de archivos)
+#       run: |
+#         trivy filesystem --format json --output trivy_results.json .
+#         echo "Reporte de Trivy generado."

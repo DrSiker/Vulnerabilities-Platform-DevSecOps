@@ -1,0 +1,157 @@
+name: Security Scanning Pipeline 3
+
+on:
+  push:
+    paths:
+      - 'app-vulnerable/**'
+  # pull_request:
+  #   paths:
+  #     - 'app-vulnerable/**'
+  # schedule:
+  #   - cron: '0 0 * * 0'  # Weekly scan on Sundays
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Required for better scanning
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip jq
+      timeout-minutes: 5
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install security tools
+      run: |
+        # Install Bandit
+        pip install bandit safety
+        
+        # Install Snyk
+        npm install -g snyk
+        
+        # Install Trivy
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
+        
+        # Install OWASP Dependency-Check
+        wget https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip
+        unzip dependency-check-8.4.0-release.zip
+      timeout-minutes: 10
+
+    - name: Run SAST Analysis (Bandit)
+      run: |
+        bandit -r app-vulnerable/src/ -f json -o bandit_report.json || true
+        echo "Bandit scan completed"
+      continue-on-error: true
+
+    - name: Run Python Dependencies Check
+      run: |
+        safety check -r app-vulnerable/requirements.txt --json > safety_report.json || true
+        echo "Safety check completed"
+      continue-on-error: true
+
+    - name: Run Snyk Security Scan
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: |
+        snyk test --all-projects --json > snyk_report.json || true
+        snyk code test --json > snyk_code_report.json || true
+        echo "Snyk scans completed"
+      continue-on-error: true
+
+    - name: Run Trivy File System Scan
+      run: |
+        trivy fs --format json --output trivy_fs_report.json . || true
+        echo "Trivy filesystem scan completed"
+      continue-on-error: true
+
+    - name: Run OWASP Dependency Check
+      run: |
+        ./dependency-check/bin/dependency-check.sh --scan app-vulnerable/ --format JSON --out dependency-check-report.json || true
+        echo "Dependency check completed"
+      continue-on-error: true
+
+    - name: Run Secret Scanning
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      continue-on-error: true
+
+    - name: Run SonarCloud Scan
+      if: github.event_name != 'pull_request'
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: Process and Combine Reports
+      run: |
+        # Combine all reports into a single summary
+        jq -s '{
+          bandit: .[0],
+          safety: .[1],
+          snyk: .[2],
+          snyk_code: .[3],
+          trivy: .[4],
+          dependency_check: .[5]
+        }' bandit_report.json safety_report.json snyk_report.json snyk_code_report.json trivy_fs_report.json dependency-check-report.json > combined_report.json
+
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          combined_report.json
+          bandit_report.json
+          safety_report.json
+          snyk_report.json
+          snyk_code_report.json
+          trivy_fs_report.json
+          dependency-check-report.json
+
+    - name: Check for Critical Vulnerabilities
+      run: |
+        if jq -e '.snyk[] | select(.severity=="critical")' snyk_report.json > /dev/null; then
+          echo "Critical vulnerabilities found!"
+          exit 1
+        fi
+      continue-on-error: true
+
+    - name: Create Security Issue
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Security Vulnerabilities Found',
+            body: 'Security scanning has detected critical vulnerabilities. Please check the pipeline artifacts for details.'
+          })
+
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -rf dependency-check/
+        rm -f *.zip
+        rm -f *.json
