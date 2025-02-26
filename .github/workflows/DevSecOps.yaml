@@ -72,7 +72,7 @@ jobs:
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       run: |
-        snyk test --all-projects --json > snyk_report.json || true
+        snyk test --all-projects --json --detection-depth=5 --file=app-vulnerable/ > snyk_report.json || true
         echo "📌 Snyk Report:"
         cat snyk_report.json || echo "{}" > snyk_report.json
 
