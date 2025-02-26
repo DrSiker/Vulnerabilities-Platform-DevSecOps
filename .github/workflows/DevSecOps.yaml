@@ -67,6 +67,11 @@ jobs:
         echo "📌 Bandit Report:"
         cat bandit_report.json || echo "{}" > bandit_report.json
 
+    - name: Install Python Dependencies
+      run: |
+        pip install -r app-vulnerable/requirements.txt
+      
+
     # Ejecutar Snyk
     - name: Run Snyk Security Scan (SCA)
       env:
