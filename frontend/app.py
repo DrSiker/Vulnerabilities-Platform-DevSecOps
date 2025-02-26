@@ -1,20 +1,26 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import requests
 
 app = Flask(__name__)
-app.config["TEMPLATES_AUTO_RELOAD"] = True  # Habilita la recarga automática de plantillas
 
-BACKEND_URL = "http://vulnerabilities-platform-devsecops-backend-1:5000/vulnerabilities"
+BACKEND_URL = "http://backend:5000"
 
-@app.route("/")
+@app.route('/')
 def index():
+    """Carga las vulnerabilidades desde el backend"""
+    severity = request.args.get("severity")
+    order_by_severity = request.args.get("order_by_severity", "false")
+
+    params = {"order_by_severity": order_by_severity}
+    if severity:
+        params["severity"] = severity
+
     try:
-        response = requests.get(BACKEND_URL)
+        response = requests.get(f"{BACKEND_URL}/vulnerabilities", params=params)
         vulnerabilities = response.json() if response.status_code == 200 else []
-    except Exception as e:
-        print("Error al obtener datos del backend:", e)
+    except requests.exceptions.RequestException:
         vulnerabilities = []
-    
+
     return render_template("index.html", vulnerabilities=vulnerabilities)
 
 if __name__ == "__main__":
