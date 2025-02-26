@@ -4,20 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Vulnerabilidades</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1>📌 Lista de Vulnerabilidades Detectadas</h1>
@@ -43,6 +30,11 @@
                 <th>ID</th>
                 <th>Descripción</th>
                 <th>Severidad</th>
+                <th>Herramienta</th>
+                <th>Archivo</th>
+                <th>Línea</th>
+                <th>Fecha</th>
+                <th>Estado</th>
             </tr>
         </thead>
         <tbody>
@@ -50,7 +42,12 @@
                 <tr>
                     <td>{{ vuln.id }}</td>
                     <td>{{ vuln.description }}</td>
-                    <td>{{ vuln.severity }}</td>
+                    <td class="severity-{{ vuln.severity.lower() }}">{{ vuln.severity }}</td>
+                    <td>{{ vuln.tool }}</td>
+                    <td>{{ vuln.file_path or 'N/A' }}</td>
+                    <td>{{ vuln.line_number or 'N/A' }}</td>
+                    <td>{{ vuln.date_found }}</td>
+                    <td class="status-{{ vuln.status.lower().replace(' ', '-') }}">{{ vuln.status }}</td>
                 </tr>
             {% endfor %}
         </tbody>
