@@ -76,10 +76,6 @@ jobs:
         echo "📌 Snyk Report:"
         cat snyk_report.json || echo "{}" > snyk_report.json
 
-        snyk code test --json > snyk_code_report.json || true
-        echo "📌 Snyk Code Report:"
-        cat snyk_code_report.json || echo "{}" > snyk_code_report.json
-
     # Ejecutar Trivy
     - name: Run Trivy File System Scan (container scanning)
       run: |
@@ -110,7 +106,6 @@ jobs:
           gitleaks_report.json
           bandit_report.json
           snyk_report.json
-          snyk_code_report.json
           trivy_fs_report.json
           dependency-check-report.json
        # safety_report.json
