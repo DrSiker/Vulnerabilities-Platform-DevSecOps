@@ -81,12 +81,6 @@ Pasos para Configurar el Proyecto
         cd backend
         pip install -r requirements.txt
 
-        Para el frontend:
-        bash
-        Copy
-
-        cd frontend
-        npm install
 
     Despliega la infraestructura con AWS CDK:
     bash
@@ -95,22 +89,6 @@ Pasos para Configurar el Proyecto
     cd cdk
     cdk bootstrap
     cdk deploy
-
-    Ejecuta el proyecto:
-
-        Backend:
-        bash
-        Copy
-
-        cd backend
-        python app.py
-
-        Frontend:
-        bash
-        Copy
-
-        cd frontend
-        npm start
 
  Prácticas de Seguridad
 
