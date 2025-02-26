@@ -1,4 +1,4 @@
-import * as cdk from 'aws-cdk-lib'; 
+import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
@@ -8,36 +8,28 @@ export class VulnerabilitiesPlatformStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-
     const vpc = new ec2.Vpc(this, 'VulnerabilitiesVpc', {
       maxAzs: 1,
       natGateways: 0,
-      subnetConfiguration: [
-        { name: 'Public', subnetType: ec2.SubnetType.PUBLIC, cidrMask: 24 }
-      ],
+      subnetConfiguration: [{ name: 'Public', subnetType: ec2.SubnetType.PUBLIC, cidrMask: 24 }],
     });
 
-    
-    const ecsSecurityGroup = new ec2.SecurityGroup(this, 'ECSSecurityGroup', { 
+    const ecsSecurityGroup = new ec2.SecurityGroup(this, 'ECSSecurityGroup', {
       vpc,
       allowAllOutbound: true,
       description: 'Security group for ECS services'
     });
 
-
-    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Allow HTTP traffic');
-    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(5000), 'Allow Backend API access');
-    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3000), 'Allow Frontend access');
-    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(5432), 'Allow Database access');
-
+    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80));
+    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(5000));
+    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3000));
+    ecsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(5432));
 
     const cluster = new ecs.Cluster(this, 'VulnerabilitiesCluster', { vpc });
-
 
     const dbRepo = ecr.Repository.fromRepositoryName(this, 'DBRepo', 'vulnerabilities-db');
     const backendRepo = ecr.Repository.fromRepositoryName(this, 'BackendRepo', 'vulnerabilities-backend');
     const frontendRepo = ecr.Repository.fromRepositoryName(this, 'FrontendRepo', 'vulnerabilities-frontend');
-
 
     const dbTask = new ecs.FargateTaskDefinition(this, 'DBTask', {
       memoryLimitMiB: 512,
@@ -89,7 +81,6 @@ export class VulnerabilitiesPlatformStack extends cdk.Stack {
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'frontend', logRetention: 7 })
     });
 
-
     new ecs.FargateService(this, 'DBService', {
       cluster,
       taskDefinition: dbTask,
@@ -113,7 +104,6 @@ export class VulnerabilitiesPlatformStack extends cdk.Stack {
       assignPublicIp: true,
       securityGroups: [ecsSecurityGroup]
     });
-
 
     new cdk.CfnOutput(this, 'FrontendURL', { value: 'http://frontend:3000', description: 'Frontend service URL' });
     new cdk.CfnOutput(this, 'BackendAPI', { value: 'http://backend:5000', description: 'Backend API endpoint' });
