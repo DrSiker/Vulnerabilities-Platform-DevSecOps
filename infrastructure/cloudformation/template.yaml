@@ -1,4 +1,3 @@
-AWSTemplateFormatVersion: '2010-09-09'
 Description: Infraestructura para la plataforma de gestión de vulnerabilidades en AWS.
 
 Parameters:
