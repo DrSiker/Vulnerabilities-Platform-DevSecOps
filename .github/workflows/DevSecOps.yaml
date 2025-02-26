@@ -114,6 +114,34 @@ jobs:
           trivy_fs_report.json
           dependency-check-report.json
        # safety_report.json
+
+    # Enviar reportes JSON al backend
+    - name: Send Security Reports to Backend
+      run: |
+        sleep 5
+
+        echo "📌 Enviando reportes al backend..."
+
+        curl -X POST "http://localhost:5000/upload-report?type=bandit" \
+        -H "Content-Type: application/json" \
+        -d @bandit_report.json || echo "Error enviando Bandit Report"
+
+        curl -X POST "http://localhost:5000/upload-report?type=snyk" \
+        -H "Content-Type: application/json" \
+        -d @snyk_report.json || echo "Error enviando Snyk Report"
+
+        curl -X POST "http://localhost:5000/upload-report?type=trivy" \
+        -H "Content-Type: application/json" \
+        -d @trivy_fs_report.json || echo "Error enviando Trivy Report"
+
+      # curl -X POST "http://localhost:5000/upload-report?type=dependency-check" \
+      # -H "Content-Type: application/json" \
+      # -d @dependency-check-report.json || echo "Error enviando Dependency-Check Report"
+
+      # curl -X POST "http://localhost:5000/upload-report?type=gitleaks" \
+      # -H "Content-Type: application/json" \
+      # -d @gitleaks_report.json || echo "Error enviando Gitleaks Report"
+
   
     # Limpiar archivos temporales después del escaneo
     - name: Cleanup
