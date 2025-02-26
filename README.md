@@ -31,12 +31,8 @@ Herramientas y Tecnologías
 
     Base de datos: PostgreSQL
 
- Estructura del Repositorio
 
-
-
-
-🚨 Detección de Vulnerabilidades
+Detección de Vulnerabilidades
 
 El proyecto integra las siguientes herramientas para la detección de vulnerabilidades:
 
@@ -165,8 +161,9 @@ Si tienes alguna pregunta o sugerencia, no dudes en contactar al mantenedor del 
 
     GitHub: DrSiker
 
+    linkedin: https://www.linkedin.com/in/didierendon/
 
-¡Gracias por visitar el repositorio! Esperamos que esta plataforma sea útil para mejorar la seguridad de tus aplicaciones. 🚀
 
-Si necesitas más ajustes o detalles adicionales, ¡avísame! 😊
-New chat
+¡Gracias por visitar el repositorio! Esperamos que esta plataforma sea útil para mejorar la seguridad de tus aplicaciones. 
+
+Si necesitas más ajustes o detalles adicionales, ¡avísame! 
