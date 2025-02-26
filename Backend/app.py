@@ -1,55 +1,53 @@
 from flask import Flask, request, jsonify
-from database import db, Vulnerability
+from database import db, insert_vulnerabilities, get_vulnerabilities
 from config_app import Config
-from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
-CORS(app)
 
-@app.route("/")
-def home():
-    return jsonify({"message": "Welcome to the Vulnerability Management Platform"}), 200
+# Diccionario de parsers por tipo de herramienta
+from parsers.bandit_parser import parse_bandit
+from parsers.snyk_parser import parse_snyk
+from parsers.trivy_parser import parse_trivy
+from parsers.gitleaks_parser import parse_gitleaks
+from parsers.dependency_parser import parse_dependency_check
 
-@app.route("/vulnerabilities", methods=["POST"])
-def report_vulnerability():
-    data = request.json
-    
-    if not isinstance(data, dict):
-        return jsonify({"error": "Invalid JSON format. Expected a dictionary."}), 400
-    
-    vulnerabilities = []
-    
-    for key, value in data.items():
-        if isinstance(value, list):  # Si es una lista de vulnerabilidades
-            for item in value:
-                description = item.get("description", "No description provided")
-                severity = item.get("severity", "Unknown")
-                vulnerabilities.append(Vulnerability(description=description, severity=severity))
-        elif isinstance(value, dict):  # Si es un solo objeto
-            description = value.get("description", "No description provided")
-            severity = value.get("severity", "Unknown")
-            vulnerabilities.append(Vulnerability(description=description, severity=severity))
-    
-    if not vulnerabilities:
-        return jsonify({"error": "No valid vulnerabilities found in the request."}), 400
+PARSERS = {
+    "bandit": parse_bandit,
+    "snyk": parse_snyk,
+    "snyk_code": parse_snyk,
+    "trivy": parse_trivy,
+    "gitleaks": parse_gitleaks,
+    "dependency-check": parse_dependency_check
+}
 
-    db.session.add_all(vulnerabilities)
-    db.session.commit()
+@app.route('/upload-report', methods=['POST'])
+def upload_report():
+    """Recibe y procesa reportes JSON de seguridad"""
+    report_type = request.args.get('type')
+    data = request.get_json()
 
-    return jsonify({"message": f"{len(vulnerabilities)} vulnerabilities reported successfully"}), 201
+    if not report_type or report_type not in PARSERS:
+        return jsonify({"error": "Invalid report type"}), 400
 
-@app.route("/vulnerabilities", methods=["GET"])
-def get_vulnerabilities():
-    vulnerabilities = Vulnerability.query.all()
+    findings = PARSERS[report_type](data)
+
+    if not findings:
+        return jsonify({"message": "No vulnerabilities found"}), 204
+
+    insert_vulnerabilities(findings)
+    return jsonify({"message": f"{report_type} report processed successfully"}), 201
+
+@app.route('/vulnerabilities', methods=['GET'])
+def get_vulns():
+    """Consulta vulnerabilidades desde la base de datos"""
+    severity = request.args.get("severity")
+    order_by_severity = request.args.get("order_by_severity", "false").lower() == "true"
+
+    vulns = get_vulnerabilities(severity=severity, order_by_severity=order_by_severity)
+
     return jsonify([
         {"id": v.id, "description": v.description, "severity": v.severity}
-        for v in vulnerabilities
+        for v in vulns
     ])
-
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(host="0.0.0.0", port=5000)
