@@ -51,3 +51,6 @@ def get_vulns():
         {"id": v.id, "description": v.description, "severity": v.severity}
         for v in vulns
     ])
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
