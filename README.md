@@ -13,22 +13,23 @@ Herramientas y Tecnologías
 
     Herramientas de seguridad:
 
-        OWASP Dependency-Check
+        Gitleaks
 
-        SonarQube
+        Bandit (SAST)
 
         Snyk
 
         Trivy
 
-        Gitleaks (para detección de secretos en repositorios)
+        OWASP Dependency-Check
+        
 
-    CI/CD: GitHub Actions, Jenkins
+    CI/CD: GitHub Actions
 
     Infraestructura como código (IaC): AWS CDK, AWS CloudFormation
 
-    Contenedores: Docker, Kubernetes
-
+    Contenedores: Docker
+    
     Base de datos: PostgreSQL
 
 
@@ -36,15 +37,15 @@ Detección de Vulnerabilidades
 
 El proyecto integra las siguientes herramientas para la detección de vulnerabilidades:
 
-    OWASP Dependency-Check: Escanea las dependencias del proyecto en busca de vulnerabilidades conocidas.
+    Gitleaks: Detecta secretos y credenciales expuestas en el repositorio.
 
-    SonarQube: Realiza análisis estático de código para detectar problemas de seguridad y calidad.
+    Bandit: Realiza análisis estático de código en Python para detectar problemas de seguridad comunes.
 
     Snyk: Identifica vulnerabilidades en dependencias y contenedores.
 
     Trivy: Escanea imágenes de Docker en busca de vulnerabilidades.
 
-    Gitleaks: Detecta secretos y credenciales expuestas en el repositorio.
+    OWASP Dependency-Check: Escanea las dependencias del proyecto en busca de vulnerabilidades conocidas.
 
 Configuración del Entorno
 Requisitos Previos
@@ -104,15 +105,13 @@ Pasos para Configurar el Proyecto
 
 Resultados y Reportes
 
-Los resultados de los escaneos de seguridad se generan en formato JSON y HTML. Puedes encontrar los reportes en las siguientes rutas:
+Los resultados de los escaneos de seguridad se generan en formato JSON en un artifact con link de descarga (.ZIP) y en los logs de consola. Puedes encontrar los reportes en las siguientes rutas dentro del pipeline:
 
-    Dependency-Check: reports/dependency-check-report.json
-
-    SonarQube: reports/sonarqube-report.html
-
-    Trivy: reports/trivy-report.json
-
-    Gitleaks: reports/gitleaks-report.json
+          gitleaks_report.json
+          bandit_report.json
+          snyk_report.json
+          trivy_fs_report.json
+          dependency-check-report.json
 
 Contribución
 
